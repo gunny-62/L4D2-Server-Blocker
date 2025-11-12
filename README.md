@@ -7,7 +7,7 @@ A PowerShell script to automatically block problematic Left 4 Dead 2 servers usi
 This tool helps protect L4D2 players from malicious servers that:
 - Expose player IP addresses in console
 - Display inappropriate content (Lewd4Dead, etc.)
-- Crash games with screamers or exploits
+- Crash games with exploits
 - Impersonate official Valve servers
 
 The script automatically blocks 54 known problematic server IPs and provides an interactive mode to block additional servers you discover.
@@ -97,8 +97,8 @@ The script blocks these categories of servers:
 - **Lewd4Dead servers** - inappropriate content servers
 - **XPMod servers** - servers that expose player IPs
 - **Fake Valve servers** - malicious servers pretending to be official
-- **Chinese doxing servers** - servers that show player locations
-- **Crash/screamer servers** - servers designed to crash your game
+- **Doxing servers** - servers that expose player IPs and locations
+- **Crash/modded servers** - servers with heavy mods which may crash your game
 
 Full list of 54 IPs is maintained in the script based on community reports.
 
