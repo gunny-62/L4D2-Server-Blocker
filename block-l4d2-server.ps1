@@ -6,6 +6,23 @@ param(
     [string]$IPAddress
 )
 
+# Function to validate IP address (checks each octet is 0-255)
+function Test-ValidIP {
+    param([string]$IP)
+    
+    if ($IP -notmatch '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
+        return $false
+    }
+    
+    $octets = $IP.Split('.')
+    foreach ($octet in $octets) {
+        if ([int]$octet -gt 255) {
+            return $false
+        }
+    }
+    return $true
+}
+
 # Check if running as administrator
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
@@ -51,6 +68,11 @@ elseif ($choice -eq "1") {
     # Manual IP blocking mode
     Write-Host "`n=== Manual IP Blocking Mode ===" -ForegroundColor Cyan
     
+    # Show current protection status
+    $currentRules = @(Get-NetFirewallRule -DisplayName "1A_L4D2_Block_*" -ErrorAction SilentlyContinue)
+    $currentBlockedCount = $currentRules.Count / 2  # Divide by 2 (inbound + outbound)
+    Write-Host "Currently blocking: $currentBlockedCount server(s)`n" -ForegroundColor Gray
+    
     $manualBlockedCount = 0
     
     while ($true) {
@@ -64,8 +86,9 @@ elseif ($choice -eq "1") {
             continue
         }
         
-        if ($IPAddress -notmatch '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
-            Write-Host "ERROR: Invalid IP address format. Please use format: xxx.xxx.xxx.xxx" -ForegroundColor Red
+        # Validate IP address format and range
+        if (-not (Test-ValidIP $IPAddress)) {
+            Write-Host "ERROR: Invalid IP address. Each octet must be 0-255." -ForegroundColor Red
             continue
         }
         
@@ -129,8 +152,9 @@ try {
     $guideSectionMatch = [regex]::Match($pageText, '(?s)IPs To Block.*?(?=<div class="commentthread|$)')
     $guideSection = if ($guideSectionMatch.Success) { $guideSectionMatch.Value } else { $pageText }
     
-    # Extract IPs from the guide section only
-    $onlineIPs = [regex]::Matches($guideSection, '\b(?:\d{1,3}\.){3}\d{1,3}\b') | ForEach-Object { $_.Value } | Sort-Object -Unique
+    # Extract and validate IPs from the guide section only
+    $potentialIPs = [regex]::Matches($guideSection, '\b(?:\d{1,3}\.){3}\d{1,3}\b') | ForEach-Object { $_.Value }
+    $onlineIPs = $potentialIPs | Where-Object { Test-ValidIP $_ } | Sort-Object -Unique
     
     if ($onlineIPs.Count -gt 0) {
         # Find IPs that are new (not in our list)
@@ -235,7 +259,9 @@ foreach ($ip in $knownBadIPs) {
 
     Write-Host "`n=== Auto-Block Summary ===" -ForegroundColor Cyan
     Write-Host "  Newly blocked:     $newlyBlocked" -ForegroundColor Green
-    Write-Host "  Skipped (exist):   $skipped" -ForegroundColor DarkGray
+    Write-Host "  Already protected: $skipped" -ForegroundColor DarkGray
+    $totalProtected = $newlyBlocked + $skipped
+    Write-Host "  Total protection:  $totalProtected server(s)" -ForegroundColor Cyan
     if ($failed -gt 0) {
         Write-Host "  Failed:            $failed" -ForegroundColor Red
     }
