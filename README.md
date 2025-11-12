@@ -79,6 +79,10 @@ The script is **idempotent** - you can run it as many times as you want. It will
 - Only create rules for new IPs
 - Show you what's already protected
 
+<img width="822" height="215" alt="image" src="https://github.com/user-attachments/assets/fc9f3a25-6978-4485-b3a7-a8713ffcab97" />
+<img width="705" height="1687" alt="image" src="https://github.com/user-attachments/assets/9a14c96c-a356-4901-8595-eaf681682511" />
+<img width="736" height="1555" alt="image" src="https://github.com/user-attachments/assets/dd8c686e-e199-4725-8257-3cd27c284751" />
+
 ## How to Find Server IPs to Block
 
 While in-game:
