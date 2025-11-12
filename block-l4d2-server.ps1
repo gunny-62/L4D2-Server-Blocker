@@ -155,6 +155,13 @@ catch {
 
 # Check and block known IPs
 Write-Host "`n[STEP 2] Auto-blocking known problematic servers..." -ForegroundColor Yellow
+Write-Host "Loading existing rules..." -ForegroundColor Gray -NoNewline
+
+# Get all existing L4D2 rules at once (fast)
+$existingRules = Get-NetFirewallRule -DisplayName "1A_L4D2_Block_*" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayName
+$existingRuleSet = [System.Collections.Generic.HashSet[string]]::new($existingRules)
+
+Write-Host " Done!" -ForegroundColor Green
 Write-Host "Processing $($knownBadIPs.Count) known IPs...`n" -ForegroundColor Gray
 
 $newlyBlocked = 0
@@ -170,9 +177,9 @@ foreach ($ip in $knownBadIPs) {
     # Show progress
     Write-Host "  [$processed/$($knownBadIPs.Count)] $ip..." -ForegroundColor Gray -NoNewline
     
-    # Check if both rules already exist
-    $inboundExists = Get-NetFirewallRule -DisplayName $inboundRuleName -ErrorAction SilentlyContinue
-    $outboundExists = Get-NetFirewallRule -DisplayName $outboundRuleName -ErrorAction SilentlyContinue
+    # Check if both rules already exist using fast HashSet lookup
+    $inboundExists = $existingRuleSet.Contains($inboundRuleName)
+    $outboundExists = $existingRuleSet.Contains($outboundRuleName)
     
     if ($inboundExists -and $outboundExists) {
         Write-Host " Skipped" -ForegroundColor DarkGray
