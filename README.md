@@ -136,7 +136,7 @@ Make sure Windows Firewall is enabled and active for your network profile (Priva
 
 The script automatically checks the [Steam Community guide](https://steamcommunity.com/sharedfiles/filedetails/?id=3419848194) for updates every time you run it.
 
-**Important:** Only IPs added to the main guide content (approved by the guide author) are automatically scanned. Comments are NOT scanned to prevent trolls from adding legitimate IPs.
+**Important:** Only IPs added to the main guide content (approved by the guide author) are automatically scanned. Comments are NOT scanned to prevent malicious actors from adding legitimate IPs.
 
 If you discover a new malicious server:
 1. **Block it immediately** using **Option 1** (Manual IP Blocking) in the script
