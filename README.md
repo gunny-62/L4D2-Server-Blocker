@@ -38,7 +38,7 @@ Based on the Steam Community guide: [L4D2 Chemotherapy - Blocking Cancerous Serv
 
 ## Usage
 
-### First Time Setup
+### Running the Script
 
 1. **Right-click PowerShell** and select **"Run as Administrator"**
 2. Navigate to the script location:
@@ -50,28 +50,27 @@ Based on the Steam Community guide: [L4D2 Chemotherapy - Blocking Cancerous Serv
    .\block-l4d2-server.ps1
    ```
 
-The script will:
-1. Check all 54 known problematic IPs
-2. Block any that aren't already blocked
-3. Show you a summary of results
-4. Enter interactive mode for additional IPs
+### Menu Options
 
-### Adding More IPs
+When you run the script, you'll see a menu:
 
-After the initial setup, the script enters **interactive mode** where you can:
+```
+What would you like to do?
+  [1] Block a specific IP address
+  [2] Auto-block all known malicious servers (recommended for first run)
+  [3] Exit
+```
+
+**Option 1 - Manual IP Blocking:**
+- Block specific IPs you discover while playing
 - Enter IP addresses one at a time
-- Type `exit`, `quit`, or `q` to finish
-- The script validates each IP before blocking
+- Type `exit` when done
 
-**Example session:**
-```
-Enter IP address to block (or 'exit' to quit): 123.45.67.89
-
-Blocking IP: 123.45.67.89
-[SUCCESS] Blocked 123.45.67.89
-
-Enter IP address to block (or 'exit' to quit): exit
-```
+**Option 2 - Auto-Block (Recommended for first time):**
+- Checks Steam Community for latest IP updates
+- Auto-blocks all 54+ known malicious servers
+- Shows real-time progress
+- Skips IPs already blocked
 
 ### Running Again
 

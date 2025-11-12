@@ -34,6 +34,90 @@ $knownBadIPs = @(
 Write-Host "=== L4D2 Server IP Blocker ===" -ForegroundColor Cyan
 Write-Host "Source: https://steamcommunity.com/sharedfiles/filedetails/?id=3419848194`n" -ForegroundColor Gray
 
+# Main menu
+Write-Host "What would you like to do?" -ForegroundColor Yellow
+Write-Host "  [1] Block a specific IP address" -ForegroundColor White
+Write-Host "  [2] Auto-block all known malicious servers (recommended for first run)" -ForegroundColor White
+Write-Host "  [3] Exit" -ForegroundColor White
+Write-Host ""
+
+$choice = Read-Host "Enter your choice (1-3)"
+
+if ($choice -eq "3") {
+    Write-Host "Exiting..." -ForegroundColor Yellow
+    exit 0
+}
+elseif ($choice -eq "1") {
+    # Manual IP blocking mode
+    Write-Host "`n=== Manual IP Blocking Mode ===" -ForegroundColor Cyan
+    
+    $manualBlockedCount = 0
+    
+    while ($true) {
+        $IPAddress = Read-Host "`nEnter IP address to block (or 'exit' to quit)"
+        
+        if ($IPAddress -eq 'exit' -or $IPAddress -eq 'quit' -or $IPAddress -eq 'q') {
+            break
+        }
+        
+        if ([string]::IsNullOrWhiteSpace($IPAddress)) {
+            continue
+        }
+        
+        if ($IPAddress -notmatch '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
+            Write-Host "ERROR: Invalid IP address format. Please use format: xxx.xxx.xxx.xxx" -ForegroundColor Red
+            continue
+        }
+        
+        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+        $inboundRuleName = "1A_L4D2_Block_${IPAddress}_Inbound"
+        $outboundRuleName = "1A_L4D2_Block_${IPAddress}_Outbound"
+        
+        Write-Host "Blocking IP: $IPAddress..." -ForegroundColor Gray -NoNewline
+        
+        try {
+            New-NetFirewallRule -DisplayName $inboundRuleName `
+                -Direction Inbound `
+                -Action Block `
+                -RemoteAddress $IPAddress `
+                -Protocol Any `
+                -Enabled True `
+                -Profile Any `
+                -Description "Blocks L4D2 server at $IPAddress (Manually added: $timestamp)" -ErrorAction Stop | Out-Null
+        
+            New-NetFirewallRule -DisplayName $outboundRuleName `
+                -Direction Outbound `
+                -Action Block `
+                -RemoteAddress $IPAddress `
+                -Protocol Any `
+                -Enabled True `
+                -Profile Any `
+                -Description "Blocks L4D2 server at $IPAddress (Manually added: $timestamp)" -ErrorAction Stop | Out-Null
+        
+            Write-Host " Blocked" -ForegroundColor Green
+            $manualBlockedCount++
+        }
+        catch {
+            if ($_.Exception.Message -match "Cannot create a file when that file already exists") {
+                Write-Host " Already blocked" -ForegroundColor Yellow
+            }
+            else {
+                Write-Host " Failed!" -ForegroundColor Red
+                Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
+            }
+        }
+    }
+    
+    Write-Host "`n=== Summary ===" -ForegroundColor Cyan
+    Write-Host "  Total IPs blocked: $manualBlockedCount" -ForegroundColor Green
+    Write-Host ""
+    exit 0
+}
+elseif ($choice -eq "2") {
+    # Auto-block mode
+    Write-Host "`n=== Auto-Block Mode ===" -ForegroundColor Cyan
+    Write-Host ""
+
 # Try to fetch updated IPs from Steam Community (optional - won't block if it fails)
 Write-Host "[STEP 1] Checking for updated IP list from Steam Community..." -ForegroundColor Yellow
 try {
@@ -146,78 +230,15 @@ foreach ($ip in $knownBadIPs) {
     }
 }
 
-Write-Host "`n=== Known IPs Summary ===" -ForegroundColor Cyan
-Write-Host "  Newly blocked:     $newlyBlocked" -ForegroundColor Green
-Write-Host "  Skipped (exist):   $skipped" -ForegroundColor DarkGray
-if ($failed -gt 0) {
-    Write-Host "  Failed:            $failed" -ForegroundColor Red
+    Write-Host "`n=== Auto-Block Summary ===" -ForegroundColor Cyan
+    Write-Host "  Newly blocked:     $newlyBlocked" -ForegroundColor Green
+    Write-Host "  Skipped (exist):   $skipped" -ForegroundColor DarkGray
+    if ($failed -gt 0) {
+        Write-Host "  Failed:            $failed" -ForegroundColor Red
+    }
+    Write-Host ""
 }
-Write-Host "`n[STEP 3] Block additional IPs (interactive mode)" -ForegroundColor Yellow
-
-$manualBlockedCount = 0
-
-# Main loop - keeps asking for IPs until user types 'exit'
-while ($true) {
-    # Prompt for IP
-    $IPAddress = Read-Host "Enter IP address to block (or 'exit' to quit)"
-    
-    # Check if user wants to exit
-    if ($IPAddress -eq 'exit' -or $IPAddress -eq 'quit' -or $IPAddress -eq 'q') {
-        break
-    }
-    
-    # Skip empty input
-    if ([string]::IsNullOrWhiteSpace($IPAddress)) {
-        continue
-    }
-    
-    # Validate IP address format
-    if ($IPAddress -notmatch '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
-        Write-Host "ERROR: Invalid IP address format. Please use format: xxx.xxx.xxx.xxx" -ForegroundColor Red
-        $IPAddress = $null
-        continue
-    }
-    
-    # Create rule names with timestamp to avoid conflicts
-    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $inboundRuleName = "1A_L4D2_Block_${IPAddress}_Inbound"
-    $outboundRuleName = "1A_L4D2_Block_${IPAddress}_Outbound"
-    
-    Write-Host "`nBlocking IP: $IPAddress" -ForegroundColor Cyan
-    
-    try {
-        # Create Inbound Rule
-        New-NetFirewallRule -DisplayName $inboundRuleName `
-            -Direction Inbound `
-            -Action Block `
-            -RemoteAddress $IPAddress `
-            -Protocol Any `
-            -Enabled True `
-            -Profile Any `
-            -Description "Blocks L4D2 server at $IPAddress (Created: $timestamp)" -ErrorAction Stop | Out-Null
-    
-        # Create Outbound Rule
-        New-NetFirewallRule -DisplayName $outboundRuleName `
-            -Direction Outbound `
-            -Action Block `
-            -RemoteAddress $IPAddress `
-            -Protocol Any `
-            -Enabled True `
-            -Profile Any `
-            -Description "Blocks L4D2 server at $IPAddress (Created: $timestamp)" -ErrorAction Stop | Out-Null
-    
-        Write-Host "[SUCCESS] Blocked $IPAddress" -ForegroundColor Green
-        $manualBlockedCount++
-    }
-    catch {
-        Write-Host "[ERROR] Failed to create firewall rules for $IPAddress" -ForegroundColor Red
-        Write-Host "  $($_.Exception.Message)" -ForegroundColor Red
-    }
+else {
+    Write-Host "Invalid choice. Please run the script again and select 1, 2, or 3." -ForegroundColor Red
+    exit 1
 }
-
-Write-Host "`n=== Final Summary ===" -ForegroundColor Cyan
-Write-Host "  Known IPs (auto):  $newlyBlocked newly blocked" -ForegroundColor Green
-Write-Host "  Manual IPs:        $manualBlockedCount" -ForegroundColor Green
-$totalBlocked = $newlyBlocked + $manualBlockedCount
-Write-Host "  Total new blocks:  $totalBlocked" -ForegroundColor Cyan
-Write-Host ""
