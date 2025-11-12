@@ -159,6 +159,9 @@ Write-Host "Loading existing rules..." -ForegroundColor Gray -NoNewline
 
 # Get all existing L4D2 rules at once (fast)
 $existingRules = Get-NetFirewallRule -DisplayName "1A_L4D2_Block_*" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayName
+if ($null -eq $existingRules) {
+    $existingRules = @()
+}
 $existingRuleSet = [System.Collections.Generic.HashSet[string]]::new($existingRules)
 
 Write-Host " Done!" -ForegroundColor Green
