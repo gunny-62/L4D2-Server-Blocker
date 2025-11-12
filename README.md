@@ -136,12 +136,15 @@ Make sure Windows Firewall is enabled and active for your network profile (Priva
 
 The script automatically checks the [Steam Community guide](https://steamcommunity.com/sharedfiles/filedetails/?id=3419848194) for updates every time you run it.
 
-If you discover a new malicious server:
-1. **Post it in the Steam Community guide** (comments)
-2. The script will automatically pick it up on the next run
-3. This helps the entire L4D2 community, not just users of this script
+**Important:** Only IPs added to the main guide content (approved by the guide author) are automatically scanned. Comments are NOT scanned to prevent trolls from adding legitimate IPs.
 
-For immediate protection, use **Option 1** (Manual IP Blocking) in the script menu.
+If you discover a new malicious server:
+1. **Block it immediately** using **Option 1** (Manual IP Blocking) in the script
+2. **Post the IP in the comments** of the Steam Community guide with details about why it's problematic
+3. Once the guide author adds it to the main guide, the script will automatically pick it up
+4. Your comment helps other users who may not have blocked it yet
+
+This workflow protects you immediately while helping the entire L4D2 community.
 
 ## License
 
