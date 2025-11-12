@@ -170,63 +170,60 @@ foreach ($ip in $knownBadIPs) {
     # Show progress
     Write-Host "  [$processed/$($knownBadIPs.Count)] $ip..." -ForegroundColor Gray -NoNewline
     
-    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $ruleCreated = $false
-    $ruleExists = $false
+    # Check if both rules already exist
+    $inboundExists = Get-NetFirewallRule -DisplayName $inboundRuleName -ErrorAction SilentlyContinue
+    $outboundExists = Get-NetFirewallRule -DisplayName $outboundRuleName -ErrorAction SilentlyContinue
     
-    # Try to create inbound rule
-    try {
-        New-NetFirewallRule -DisplayName $inboundRuleName `
-            -Direction Inbound `
-            -Action Block `
-            -RemoteAddress $ip `
-            -Protocol Any `
-            -Enabled True `
-            -Profile Any `
-            -Description "Blocks L4D2 server at $ip (Auto-blocked from known list)" -ErrorAction Stop | Out-Null
-        $ruleCreated = $true
-    }
-    catch {
-        if ($_.Exception.Message -match "Cannot create a file when that file already exists") {
-            $ruleExists = $true
-        }
-        else {
-            Write-Host " Failed!" -ForegroundColor Red
-            $failed++
-            continue
-        }
-    }
-    
-    # Try to create outbound rule
-    try {
-        New-NetFirewallRule -DisplayName $outboundRuleName `
-            -Direction Outbound `
-            -Action Block `
-            -RemoteAddress $ip `
-            -Protocol Any `
-            -Enabled True `
-            -Profile Any `
-            -Description "Blocks L4D2 server at $ip (Auto-blocked from known list)" -ErrorAction Stop | Out-Null
-        $ruleCreated = $true
-    }
-    catch {
-        if ($_.Exception.Message -match "Cannot create a file when that file already exists") {
-            $ruleExists = $true
-        }
-        else {
-            Write-Host " Failed!" -ForegroundColor Red
-            $failed++
-            continue
-        }
-    }
-    
-    if ($ruleCreated) {
-        Write-Host " Blocked" -ForegroundColor Green
-        $newlyBlocked++
-    }
-    elseif ($ruleExists) {
+    if ($inboundExists -and $outboundExists) {
         Write-Host " Skipped" -ForegroundColor DarkGray
         $skipped++
+        continue
+    }
+    
+    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $bothCreated = $true
+    
+    # Create inbound rule if it doesn't exist
+    if (-not $inboundExists) {
+        try {
+            New-NetFirewallRule -DisplayName $inboundRuleName `
+                -Direction Inbound `
+                -Action Block `
+                -RemoteAddress $ip `
+                -Protocol Any `
+                -Enabled True `
+                -Profile Any `
+                -Description "Blocks L4D2 server at $ip (Auto-blocked from known list)" -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Write-Host " Failed (Inbound)!" -ForegroundColor Red
+            $failed++
+            $bothCreated = $false
+        }
+    }
+    
+    # Create outbound rule if it doesn't exist
+    if (-not $outboundExists -and $bothCreated) {
+        try {
+            New-NetFirewallRule -DisplayName $outboundRuleName `
+                -Direction Outbound `
+                -Action Block `
+                -RemoteAddress $ip `
+                -Protocol Any `
+                -Enabled True `
+                -Profile Any `
+                -Description "Blocks L4D2 server at $ip (Auto-blocked from known list)" -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Write-Host " Failed (Outbound)!" -ForegroundColor Red
+            $failed++
+            $bothCreated = $false
+        }
+    }
+    
+    if ($bothCreated) {
+        Write-Host " Blocked" -ForegroundColor Green
+        $newlyBlocked++
     }
 }
 
