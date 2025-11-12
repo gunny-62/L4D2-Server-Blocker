@@ -132,12 +132,16 @@ You must run PowerShell as Administrator:
 
 Make sure Windows Firewall is enabled and active for your network profile (Private/Public).
 
-## Contributing
+## Found a New Problematic Server?
 
-Found a new problematic server? Please:
-1. Open an issue with the server IP
-2. Include details about what makes it problematic
-3. Or submit a pull request updating the `$knownBadIPs` array
+The script automatically checks the [Steam Community guide](https://steamcommunity.com/sharedfiles/filedetails/?id=3419848194) for updates every time you run it.
+
+If you discover a new malicious server:
+1. **Post it in the Steam Community guide** (comments)
+2. The script will automatically pick it up on the next run
+3. This helps the entire L4D2 community, not just users of this script
+
+For immediate protection, use **Option 1** (Manual IP Blocking) in the script menu.
 
 ## License
 
