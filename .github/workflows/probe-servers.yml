@@ -85,13 +85,14 @@ jobs:
               try:
                   # Query master server for L4D2 servers
                   print("Querying Steam master server for L4D2 servers...")
-                  msq = valve.source.master_server.MasterServerQuerier()
+                  msq = valve.source.master_server.MasterServerQuerier(
+                      address=('hl2master.steampowered.com', 27011)
+                  )
                   
                   # Query for L4D2 servers (appid 550)
-                  # Use region 0xFF for all regions
                   servers = msq.find(
-                      gamedir="left4dead2",
-                      region=0xFF,
+                      region=[0xFF],
+                      gamedir="left4dead2"
                   )
                   
                   count = 0
