@@ -1,0 +1,232 @@
+name: Probe L4D2 Servers
+
+on:
+  schedule:
+    # Run daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  probe-servers:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install python-valve a2s
+          
+      - name: Probe L4D2 servers
+        id: probe
+        run: |
+          python - << 'EOF'
+          import valve.source.a2s
+          import valve.source.master_server
+          import socket
+          import re
+          import json
+          from datetime import datetime
+
+          # Known problematic patterns
+          SUSPICIOUS_PATTERNS = {
+              'lewd': ['lewd', 'nsfw', 'hentai', 'porn', 'xxx'],
+              'dox': ['your ip', 'ip address:', 'ip:', 'location:', 'city:', 'country:'],
+              'fake_valve': ['valve official', 'valve server', 'official valve'],
+              'xpmod': ['xpmod', 'level up', 'exp mod', 'experience'],
+          }
+
+          def is_suspicious(server_info):
+              """Check if server info contains suspicious patterns"""
+              reasons = []
+              server_name = server_info.get('server_name', '').lower()
+              
+              # Check server name for suspicious patterns
+              for category, patterns in SUSPICIOUS_PATTERNS.items():
+                  for pattern in patterns:
+                      if pattern in server_name:
+                          reasons.append(f"{category}: Contains '{pattern}' in name")
+              
+              # Check for suspicious keywords in rules/tags
+              rules = str(server_info.get('rules', {})).lower()
+              if 'ip' in rules and any(word in rules for word in ['your', 'show', 'display']):
+                  reasons.append("dox: Rules mention showing IPs")
+                  
+              return reasons
+
+          def get_current_blocked_ips():
+              """Extract currently blocked IPs from script"""
+              blocked = set()
+              try:
+                  with open('block-l4d2-server.ps1', 'r') as f:
+                      content = f.read()
+                      # Extract IPs from fallback list
+                      ips = re.findall(r'"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"', content)
+                      blocked.update(ips)
+              except Exception as e:
+                  print(f"Error reading blocked IPs: {e}")
+              return blocked
+
+          def probe_servers():
+              """Probe L4D2 servers and find suspicious ones"""
+              suspicious_servers = []
+              blocked_ips = get_current_blocked_ips()
+              
+              try:
+                  # Query master server for L4D2 servers
+                  print("Querying Steam master server for L4D2 servers...")
+                  msq = valve.source.master_server.MasterServerQuerier()
+                  
+                  # Query for L4D2 servers (appid 550)
+                  servers = msq.find(
+                      gamedir="left4dead2",
+                      region=valve.source.master_server.REGION_ALL,
+                  )
+                  
+                  count = 0
+                  checked = 0
+                  
+                  for address in servers:
+                      if count >= 100:  # Limit to 100 servers per run to avoid timeouts
+                          break
+                          
+                      ip = address[0]
+                      port = address[1]
+                      
+                      # Skip already blocked IPs
+                      if ip in blocked_ips:
+                          continue
+                      
+                      checked += 1
+                      
+                      try:
+                          # Query server info
+                          server_addr = (ip, port)
+                          with valve.source.a2s.ServerQuerier(server_addr, timeout=3.0) as server:
+                              info = server.info()
+                              
+                              server_data = {
+                                  'ip': ip,
+                                  'port': port,
+                                  'server_name': info.get('server_name', 'Unknown'),
+                                  'map': info.get('map_name', 'Unknown'),
+                                  'players': f"{info.get('player_count', 0)}/{info.get('max_players', 0)}",
+                                  'game': info.get('game', 'Unknown'),
+                              }
+                              
+                              # Try to get rules (may timeout/fail)
+                              try:
+                                  rules = server.rules()
+                                  server_data['rules'] = dict(rules)
+                              except:
+                                  server_data['rules'] = {}
+                              
+                              # Check for suspicious behavior
+                              reasons = is_suspicious(server_data)
+                              
+                              if reasons:
+                                  server_data['reasons'] = reasons
+                                  suspicious_servers.append(server_data)
+                                  print(f"⚠️  Suspicious: {ip}:{port} - {server_data['server_name']}")
+                                  for reason in reasons:
+                                      print(f"   └─ {reason}")
+                              
+                              count += 1
+                              
+                      except socket.timeout:
+                          pass  # Server didn't respond in time
+                      except Exception as e:
+                          pass  # Other errors (server offline, etc.)
+                  
+                  print(f"\nChecked {checked} servers, found {len(suspicious_servers)} suspicious")
+                  
+              except Exception as e:
+                  print(f"Error querying master server: {e}")
+              
+              return suspicious_servers
+
+          # Run the probe
+          suspicious = probe_servers()
+
+          # Save results
+          if suspicious:
+              with open('suspicious_servers.json', 'w') as f:
+                  json.dump(suspicious, f, indent=2)
+              print(f"\n✅ Saved {len(suspicious)} suspicious servers to suspicious_servers.json")
+          else:
+              print("\n✅ No new suspicious servers found")
+          EOF
+          
+      - name: Create issues for suspicious servers
+        if: hashFiles('suspicious_servers.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f suspicious_servers.json ]; then
+            echo "No suspicious servers found"
+            exit 0
+          fi
+          
+          # Parse JSON and create issues
+          python - << 'EOF'
+          import json
+          import os
+          import subprocess
+          
+          with open('suspicious_servers.json', 'r') as f:
+              servers = json.load(f)
+          
+          for server in servers:
+              title = f"🚨 Suspicious Server: {server['ip']} - {server['server_name']}"
+              
+              body = f"""## Suspicious Server Detected
+          
+          **IP Address:** `{server['ip']}:{server['port']}`
+          **Server Name:** {server['server_name']}
+          **Map:** {server['map']}
+          **Players:** {server['players']}
+          
+          ### Reasons for Flagging:
+          """
+              
+              for reason in server['reasons']:
+                  body += f"- ⚠️ {reason}\n"
+              
+              body += f"""
+          
+          ### Rules/Settings:
+          ```json
+          {json.dumps(server.get('rules', {}), indent=2)}
+          ```
+          
+          ---
+          
+          **Action Required:**
+          1. Manually verify this server is problematic
+          2. If confirmed, add `{server['ip']}` to the Steam Community guide
+          3. The weekly sync will pick it up automatically
+          
+          *This issue was automatically generated by the server probe workflow.*
+          """
+              
+              # Create GitHub issue using gh CLI
+              subprocess.run([
+                  'gh', 'issue', 'create',
+                  '--title', title,
+                  '--body', body,
+                  '--label', 'suspicious-server',
+                  '--label', 'needs-review'
+              ])
+              
+              print(f"✅ Created issue for {server['ip']}")
+          EOF
