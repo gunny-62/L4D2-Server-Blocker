@@ -88,9 +88,10 @@ jobs:
                   msq = valve.source.master_server.MasterServerQuerier()
                   
                   # Query for L4D2 servers (appid 550)
+                  # Use region 0xFF for all regions
                   servers = msq.find(
                       gamedir="left4dead2",
-                      region=valve.source.master_server.REGION_ALL,
+                      region=0xFF,
                   )
                   
                   count = 0
