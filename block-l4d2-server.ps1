@@ -144,7 +144,10 @@ elseif ($choice -eq "2") {
 # Try to fetch updated IPs from Steam Community (optional - won't block if it fails)
 Write-Host "[STEP 1] Checking for updated IP list from Steam Community..." -ForegroundColor Yellow
 try {
+    # Suppress progress bar to avoid blue flicker
+    $ProgressPreference = 'SilentlyContinue'
     $webContent = Invoke-WebRequest -Uri "https://steamcommunity.com/sharedfiles/filedetails/?id=3419848194" -TimeoutSec 5 -ErrorAction Stop
+    $ProgressPreference = 'Continue'
     $pageText = $webContent.Content
     
     # Extract only IPs from the main guide content (not comments)
