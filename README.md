@@ -80,7 +80,7 @@ The script is **idempotent** - you can run it as many times as you want. It will
 - Skip IPs that are already blocked
 - Only create rules for new IPs
 - Show you what's already protected
-- 
+- Block all servers and provide a summary
 ## How to Find Server IPs to Block
 
 While in-game:
