@@ -33,8 +33,8 @@ if (-not $isAdmin) {
     exit 1
 }
 
-# Known problematic L4D2 server IPs from the Steam community guide
-$knownBadIPs = @(
+# Fallback IP list (used only if Steam Community is unreachable)
+$fallbackIPs = @(
     "46.174.48.20", "18.180.172.93", "46.174.50.13", "46.174.51.200", "2.58.201.66",
     "93.190.139.252", "172.93.102.9", "96.126.124.92", "175.140.7.89", "109.236.90.41",
     "74.91.112.169", "74.91.112.162", "154.8.209.16", "43.163.71.148", "1.15.90.156",
@@ -141,8 +141,11 @@ elseif ($choice -eq "2") {
     Write-Host "`n=== Auto-Block Mode ===" -ForegroundColor Cyan
     Write-Host ""
 
-# Try to fetch updated IPs from Steam Community (optional - won't block if it fails)
-Write-Host "[STEP 1] Checking for updated IP list from Steam Community..." -ForegroundColor Yellow
+# Fetch IP list from Steam Community (primary source)
+Write-Host "[STEP 1] Fetching IP list from Steam Community..." -ForegroundColor Yellow
+$knownBadIPs = @()
+$usedFallback = $false
+
 try {
     # Suppress progress bar to avoid blue flicker
     $ProgressPreference = 'SilentlyContinue'
@@ -157,27 +160,21 @@ try {
     
     # Extract and validate IPs from the guide section only
     $potentialIPs = [regex]::Matches($guideSection, '\b(?:\d{1,3}\.){3}\d{1,3}\b') | ForEach-Object { $_.Value }
-    $onlineIPs = $potentialIPs | Where-Object { Test-ValidIP $_ } | Sort-Object -Unique
+    $knownBadIPs = @($potentialIPs | Where-Object { Test-ValidIP $_ } | Sort-Object -Unique)
     
-    if ($onlineIPs.Count -gt 0) {
-        # Find IPs that are new (not in our list)
-        $newIPs = $onlineIPs | Where-Object { $knownBadIPs -notcontains $_ }
-        
-        if ($newIPs.Count -gt 0) {
-            Write-Host "  Found $($newIPs.Count) new IP(s) from Steam Community:" -ForegroundColor Green
-            foreach ($newIP in $newIPs) {
-                Write-Host "    + $newIP" -ForegroundColor Cyan
-            }
-            # Merge with known list
-            $knownBadIPs = ($knownBadIPs + $newIPs) | Sort-Object -Unique
-        }
-        else {
-            Write-Host "  IP list is up to date." -ForegroundColor Green
-        }
+    if ($knownBadIPs.Count -gt 0) {
+        Write-Host "  Successfully loaded $($knownBadIPs.Count) IPs from Steam Community" -ForegroundColor Green
+    }
+    else {
+        Write-Host "  No IPs found in guide, using fallback list" -ForegroundColor Yellow
+        $knownBadIPs = $fallbackIPs
+        $usedFallback = $true
     }
 }
 catch {
-    Write-Host "  Could not fetch online list (continuing with built-in list)" -ForegroundColor Yellow
+    Write-Host "  Could not reach Steam Community, using fallback list ($($fallbackIPs.Count) IPs)" -ForegroundColor Yellow
+    $knownBadIPs = $fallbackIPs
+    $usedFallback = $true
 }
 
 # Check and block known IPs
