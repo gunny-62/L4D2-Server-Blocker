@@ -1,0 +1,108 @@
+name: Update Fallback IPs
+
+on:
+  schedule:
+    # Run every Sunday at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-ips:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Fetch latest IPs from Steam Community
+        id: fetch-ips
+        run: |
+          # Fetch Steam Community page
+          response=$(curl -s "https://steamcommunity.com/sharedfiles/filedetails/?id=3419848194")
+          
+          # Extract IPs from guide section (before comments)
+          ips=$(echo "$response" | grep -oP '\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b' | sort -u)
+          
+          # Validate IPs (each octet <= 255)
+          valid_ips=""
+          while IFS= read -r ip; do
+            valid=true
+            IFS='.' read -ra octets <<< "$ip"
+            for octet in "${octets[@]}"; do
+              if [ "$octet" -gt 255 ]; then
+                valid=false
+                break
+              fi
+            done
+            if [ "$valid" = true ]; then
+              valid_ips="$valid_ips$ip"$'\n'
+            fi
+          done <<< "$ips"
+          
+          # Count IPs
+          ip_count=$(echo "$valid_ips" | grep -c '^' || echo 0)
+          echo "Found $ip_count valid IPs"
+          echo "ip_count=$ip_count" >> $GITHUB_OUTPUT
+          
+          # Save to file
+          echo "$valid_ips" > ips.txt
+          
+      - name: Update fallback IPs in script
+        run: |
+          # Read IPs and format as PowerShell array
+          formatted_ips=""
+          first=true
+          while IFS= read -r ip; do
+            if [ -n "$ip" ]; then
+              if [ "$first" = true ]; then
+                formatted_ips="    \"$ip\""
+                first=false
+              else
+                formatted_ips="$formatted_ips, \"$ip\""
+              fi
+            fi
+          done < ips.txt
+          
+          # Update the script file
+          awk -v ips="$formatted_ips" '
+            BEGIN { in_fallback=0; printed=0 }
+            /^# Fallback IP list/ { in_fallback=1; print; next }
+            /^\$fallbackIPs = @\(/ { 
+              if (in_fallback) {
+                print "$fallbackIPs = @("
+                print ips
+                print ")"
+                printed=1
+                next
+              }
+            }
+            /^\)/ {
+              if (in_fallback && !printed) {
+                next
+              } else {
+                in_fallback=0
+              }
+            }
+            { if (!in_fallback || printed) print }
+          ' block-l4d2-server.ps1 > block-l4d2-server.ps1.tmp
+          mv block-l4d2-server.ps1.tmp block-l4d2-server.ps1
+          
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if git diff --quiet block-l4d2-server.ps1; then
+            echo "No changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Commit and push if changed
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add block-l4d2-server.ps1
+          git commit -m "Auto-update: Sync fallback IPs from Steam Community (${{ steps.fetch-ips.outputs.ip_count }} IPs)"
+          git push

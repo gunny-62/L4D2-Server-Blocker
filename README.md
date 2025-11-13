@@ -10,7 +10,7 @@ This tool helps protect L4D2 players from malicious servers that:
 - Crash games
 - Impersonate official Valve servers
 
-The script automatically blocks 54 known problematic server IPs and provides an interactive mode to block additional servers you discover.
+The script automatically blocks all known problematic server IPs from the community guide and provides an interactive mode to block additional servers you discover.
 
 ## Credits
 
@@ -18,7 +18,7 @@ Based on the Steam Community guide: [L4D2 Chemotherapy - Blocking Cancerous Serv
 
 ## Features
 
-- ✅ **Auto-blocks 54 known malicious servers** from the community list
+- ✅ **Auto-blocks all known malicious servers** from the community list
 - ✅ **Smart detection** - skips IPs that are already blocked
 - ✅ **Interactive mode** - easily add new IPs as you discover them
 - ✅ **Detailed reporting** - see what was blocked and what was already protected
@@ -67,8 +67,8 @@ What would you like to do?
 - Type `exit` when done
 
 **Option 2 - Auto-Block (Recommended for first time):**
-- Checks Steam Community for latest IP updates
-- Auto-blocks all 54+ known malicious servers
+- Fetches latest IP list from Steam Community guide
+- Auto-blocks all known malicious servers
 - Shows real-time progress
 - Skips IPs already blocked
 
@@ -98,7 +98,7 @@ The script blocks these categories of servers:
 - **Doxing servers** - servers that expose player IPs and locations
 - **Crash/modded servers** - servers with heavy mods which may crash your game
 
-Full list of 54 IPs is maintained in the script based on community reports.
+The IP list is automatically fetched from the Steam Community guide each time you run the script, ensuring you always have the latest protection.
 
 ## Uninstalling / Removing Rules
 
