@@ -72,7 +72,7 @@ What would you like to do?
 - Shows real-time progress
 - Skips IPs already blocked
 
-![demo](https://github.com/user-attachments/assets/b0f2cc27-18f2-4e4f-86d7-7313b5978829)
+![demo (1)](https://github.com/user-attachments/assets/9469fd3f-c1d9-4f1e-84a5-a935d6511423)
 
 ### Running Again
 
