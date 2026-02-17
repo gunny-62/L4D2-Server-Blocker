@@ -139,7 +139,7 @@ $usedFallback = $false
 try {
     # Suppress progress bar to avoid blue flicker
     $ProgressPreference = 'SilentlyContinue'
-    $webContent = Invoke-WebRequest -Uri "https://steamcommunity.com/sharedfiles/filedetails/?id=3419848194" -TimeoutSec 5 -ErrorAction Stop
+    $webContent = Invoke-WebRequest -Uri "https://steamcommunity.com/sharedfiles/filedetails/?id=3419848194" -TimeoutSec 5 -ErrorAction Stop -UseBasicParsing
     $ProgressPreference = 'Continue'
     $pageText = $webContent.Content
     
