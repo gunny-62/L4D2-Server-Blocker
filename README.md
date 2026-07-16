@@ -5,7 +5,7 @@ A PowerShell script to automatically block problematic Left 4 Dead 2 servers usi
 ## About
 
 This tool helps protect L4D2 players from malicious servers that:
-- Expose player IP addresses in console
+- Expose player IP addresses in chat
 - Display inappropriate content (Lewd4Dead, etc.)
 - Crash games
 - Impersonate official Valve servers
