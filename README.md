@@ -96,7 +96,6 @@ The script blocks these categories of servers:
 - **XPMod servers** - servers that expose player IPs
 - **Fake Valve servers** - malicious servers pretending to be official
 - **Doxing servers** - servers that expose player IPs and locations
-- **Crash/modded servers** - servers with heavy mods which may crash your game
 
 The IP list is automatically fetched from the Steam Community guide each time you run the script, ensuring you always have the latest protection.
 
